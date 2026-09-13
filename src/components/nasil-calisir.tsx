@@ -24,10 +24,9 @@ import { api } from '@/lib/api';
 
 const ADIM_SURESI_MS = 3400;
 
-/** Sol taraftaki fotoğraf kompozisyonu. Değiştirmek için yolları düzenle. */
+/** Sol taraftaki fotoğraf. Değiştirmek için yolu düzenle. */
 const KOMPOZISYON = {
   buyuk: 'products/hurmet-mutfak-ev-yemekleri-etli-yemekler-izgara-tavuk-pirinc-pilavi-350-gr.webp',
-  kucuk: 'products/sadece-manti-citir-manti.webp',
 };
 
 interface Adim {
@@ -159,19 +158,6 @@ export function NasilCalisir() {
                 height={1100}
                 loading="lazy"
                 className="aspect-[4/5] w-full object-cover"
-              />
-            </div>
-
-            <div className="gorsel-cerceve absolute -bottom-8 -right-4 w-40 overflow-hidden rounded-2xl border-4 border-orman-900 shadow-kart-uzeri sm:w-48">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={api.medya(KOMPOZISYON.kucuk) ?? ''}
-                alt=""
-                aria-hidden
-                width={400}
-                height={400}
-                loading="lazy"
-                className="aspect-square w-full object-cover"
               />
             </div>
 
