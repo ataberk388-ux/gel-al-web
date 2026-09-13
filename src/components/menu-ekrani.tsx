@@ -7,31 +7,36 @@
  *   • Aynı şubedeki farklı markalardan ortak sepet
  *   • Sepette ürünlerin markalara göre gruplanması
  *   • Şube değişikliğinde sepet uyarısı ve kontrollü temizleme
+ *
+ * Düzen geniş ekranda üç sütun — küresel sipariş sitelerinin restoran
+ * sayfasıyla aynı mantık:
+ *
+ *     [ kategoriler ]   [ ürünler ]   [ sepet ]
+ *
+ * Sekiz markanın 462 ürünü var; kategori listesi sabit dururken müşteri
+ * menüde kayboluyordu. Sepet de alttan bir çubuktu — sipariş büyüdükçe ne
+ * eklediğini görmek için açıp kapatmak gerekiyordu.
  */
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   formatMinor,
+  WEB_PATHS,
   type BranchDetail,
   type BrandMenu,
   type MenuProduct,
 } from '@gelal/shared';
-import { api } from '@/lib/api';
 import { useSepet, satirToplami, type SepetSatiri } from '@/lib/sepet';
 import { MarkaRozeti } from '@/components/marka-rozeti';
+import { UrunKarti } from '@/components/urun-karti';
 import { baslikYap } from '@/lib/metin';
-
-function gorselUrl(yol: string | null): string | null {
-  return api.medya(yol);
-}
 
 export function MenuEkrani({ sube }: { sube: BranchDetail }) {
   const [aktifMarkaId, setAktifMarkaId] = useState(sube.menu[0]?.id ?? '');
   const [aktifKategoriId, setAktifKategoriId] = useState<string | null>(null);
   const [uyari, setUyari] = useState<{ mevcutSube: string } | null>(null);
   const [sepetAcik, setSepetAcik] = useState(false);
-  const [sonEklenen, setSonEklenen] = useState<string | null>(null);
 
   const sepet = useSepet();
   const marka = useMemo(
@@ -50,6 +55,21 @@ export function MenuEkrani({ sube }: { sube: BranchDetail }) {
       ? marka.categories.filter((k) => k.id === aktifKategoriId)
       : marka.categories;
   }, [marka, aktifKategoriId]);
+
+  /**
+   * Ürün → sepetteki toplam adet.
+   *
+   * Aynı ürün farklı seçeneklerle birden çok satır olabilir; kartta toplamı
+   * gösteriyoruz. Müşterinin sorduğu soru "bundan kaç tane aldım", "hangi
+   * seçenekle kaç tane" değil — o ayrıntı sepet panelinde duruyor.
+   */
+  const adetHaritasi = useMemo(() => {
+    const harita = new Map<string, number>();
+    for (const satir of sepet.durum.satirlar) {
+      harita.set(satir.urunId, (harita.get(satir.urunId) ?? 0) + satir.adet);
+    }
+    return harita;
+  }, [sepet.durum.satirlar]);
 
   function urunEkle(urun: MenuProduct, m: BrandMenu) {
     // Zorunlu seçenek grubu varsa varsayılanı (yoksa ilkini) seçiyoruz.
@@ -73,53 +93,73 @@ export function MenuEkrani({ sube }: { sube: BranchDetail }) {
     const sonuc = sepet.ekle({ id: sube.id, ad: sube.name, slug: sube.slug }, satir);
     if (sonuc.durum === 'subeDegisikligi') {
       setUyari({ mevcutSube: sonuc.mevcutSube });
-      return;
     }
-    setSonEklenen(urun.id);
-    window.setTimeout(() => setSonEklenen((mevcut) => (mevcut === urun.id ? null : mevcut)), 1200);
+  }
+
+  /** Karttaki eksi düğmesi — o ürünün en son eklenen satırından bir tane düşer. */
+  function urunAzalt(urunId: string) {
+    const satir = [...sepet.durum.satirlar].reverse().find((s) => s.urunId === urunId);
+    if (!satir) return;
+    sepet.adetDegistir(sepet.anahtarla(satir), satir.adet - 1);
   }
 
   return (
     <>
       {/* ---------------- Şube başlığı ---------------- */}
       <div className="border-b border-krem-200 bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <div className="kabuk py-8">
           <Link
-            href="/#subeler"
-            className="text-sm font-medium text-orman-600 transition hover:text-orman-800"
+            href={WEB_PATHS.subeler()}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-orman-600 transition hover:text-orman-800"
           >
-            ← Tüm şubeler
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden className="size-4">
+              <path
+                d="M13 8H4m0 0 3.5-3.5M4 8l3.5 3.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Tüm şubeler
           </Link>
 
-          <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
+          <div className="mt-5 flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-altin-600">
                 Hürmet Gıda
               </p>
-              <h1 className="mt-2 text-3xl font-semibold text-orman-800 sm:text-4xl">
+              <h1 className="mt-2 text-3xl font-semibold text-orman-800 sm:text-4xl xl:text-5xl">
                 {sube.name}
               </h1>
-              <p className="mt-2 text-sm text-orman-500">
+              <p className="mt-2.5 text-sm text-orman-500">
                 {sube.addressLine} · {sube.district}/{sube.city}
               </p>
             </div>
 
-            <div className="flex items-center gap-4 text-sm">
-              <span className="inline-flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2.5 text-sm">
+              <span
+                className={`inline-flex items-center gap-2 rounded-full px-3.5 py-2 font-medium ${
+                  sube.isOpen ? 'bg-orman-50 text-orman-700' : 'bg-krem-200 text-orman-500'
+                }`}
+              >
                 <span
                   aria-hidden
                   className={`size-2 rounded-full ${sube.isOpen ? 'bg-orman-500' : 'bg-krem-400'}`}
                 />
-                <span className={sube.isOpen ? 'text-orman-700' : 'text-orman-500'}>
-                  {sube.isOpen ? 'Siparişe açık' : 'Şu an kapalı'}
-                </span>
+                {sube.isOpen ? 'Siparişe açık' : 'Şu an kapalı'}
               </span>
-              <span className="text-orman-500">~{sube.prepMinutes} dk hazırlanma</span>
+              <span className="rounded-full bg-krem-100 px-3.5 py-2 text-orman-600">
+                ~{sube.prepMinutes} dk hazırlanma
+              </span>
+              <span className="rounded-full bg-krem-100 px-3.5 py-2 text-orman-600">
+                {sube.menu.length} marka
+              </span>
             </div>
           </div>
 
           {/* Marka sekmeleri */}
-          <div className="serit -mx-4 mt-6 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 lg:flex-wrap lg:overflow-visible">
+          <div className="serit -mx-4 mt-7 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 lg:flex-wrap lg:overflow-visible">
             {sube.menu.map((m) => {
               const aktif = m.id === marka?.id;
               return (
@@ -128,10 +168,10 @@ export function MenuEkrani({ sube }: { sube: BranchDetail }) {
                   type="button"
                   onClick={() => setAktifMarkaId(m.id)}
                   aria-pressed={aktif}
-                  className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition ${
+                  className={`shrink-0 rounded-full border px-4 py-2.5 text-sm font-medium transition duration-200 ${
                     aktif
-                      ? 'border-transparent text-white'
-                      : 'border-krem-300 bg-white text-orman-700 hover:border-orman-300'
+                      ? 'border-transparent text-white shadow-kart'
+                      : 'border-krem-300 bg-white text-orman-700 hover:-translate-y-0.5 hover:border-orman-300'
                   }`}
                   style={aktif ? { backgroundColor: m.colorHex ?? '#1f4a34' } : undefined}
                 >
@@ -143,13 +183,63 @@ export function MenuEkrani({ sube }: { sube: BranchDetail }) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        <div className="grid gap-10 lg:grid-cols-[1fr_22rem]">
-          {/* ---------------- Menü ---------------- */}
-          <div>
-            {/* Kategori filtresi */}
+      <div className="kabuk py-10">
+        <div className="grid gap-8 lg:grid-cols-[1fr_21rem] xl:grid-cols-[14rem_1fr_23rem] xl:gap-10">
+          {/* ---------------- Kategoriler (geniş ekran) ---------------- */}
+          <aside className="hidden xl:block">
+            <nav aria-label="Kategoriler" className="sticky top-28">
+              <p className="px-3 text-xs font-semibold uppercase tracking-[0.16em] text-orman-400">
+                Kategoriler
+              </p>
+              <ul className="mt-3 space-y-0.5">
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setAktifKategoriId(null)}
+                    aria-pressed={aktifKategoriId === null}
+                    className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition ${
+                      aktifKategoriId === null
+                        ? 'bg-orman-800 font-medium text-krem-50'
+                        : 'text-orman-600 hover:bg-white hover:text-orman-800'
+                    }`}
+                  >
+                    <span>Tümü</span>
+                    <span className="text-xs tabular-nums opacity-70">
+                      {marka?.categories.reduce((t, k) => t + k.products.length, 0) ?? 0}
+                    </span>
+                  </button>
+                </li>
+                {marka?.categories.map((kategori) => {
+                  const aktif = aktifKategoriId === kategori.id;
+                  return (
+                    <li key={kategori.id}>
+                      <button
+                        type="button"
+                        onClick={() => setAktifKategoriId(kategori.id)}
+                        aria-pressed={aktif}
+                        className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition ${
+                          aktif
+                            ? 'bg-orman-800 font-medium text-krem-50'
+                            : 'text-orman-600 hover:bg-white hover:text-orman-800'
+                        }`}
+                      >
+                        <span className="min-w-0 truncate">{baslikYap(kategori.name)}</span>
+                        <span className="shrink-0 text-xs tabular-nums opacity-70">
+                          {kategori.products.length}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+          </aside>
+
+          {/* ---------------- Ürünler ---------------- */}
+          <div className="min-w-0">
+            {/* Kategori şeridi — kenar çubuğunun görünmediği genişliklerde */}
             {marka && marka.categories.length > 1 ? (
-              <div className="serit -mx-4 mb-8 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+              <div className="serit -mx-4 mb-8 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0 xl:hidden">
                 <button
                   type="button"
                   onClick={() => setAktifKategoriId(null)}
@@ -181,71 +271,29 @@ export function MenuEkrani({ sube }: { sube: BranchDetail }) {
             ) : null}
 
             {gosterilenKategoriler.map((kategori) => (
-              <section key={kategori.id} className="mb-12">
-                <h2 className="text-xl font-semibold text-orman-800">
-                  {baslikYap(kategori.name)}
-                </h2>
-                <p className="mt-1 text-sm text-orman-500">{kategori.products.length} ürün</p>
+              <section key={kategori.id} className="mb-14 scroll-mt-28">
+                <div className="flex items-baseline justify-between gap-4">
+                  <h2 className="text-xl font-semibold text-orman-800 xl:text-2xl">
+                    {baslikYap(kategori.name)}
+                  </h2>
+                  <span className="shrink-0 text-sm text-orman-400">
+                    {kategori.products.length} ürün
+                  </span>
+                </div>
+                <div aria-hidden className="mt-3 h-px w-10 rounded-full bg-altin-400" />
 
-                <ul className="mt-5 grid gap-4 sm:grid-cols-2">
-                  {kategori.products.map((urun) => {
-                    const gorsel = gorselUrl(urun.thumbnailPath ?? urun.imagePath);
-                    const eklendi = sonEklenen === urun.id;
-                    return (
-                      <li
-                        key={urun.id}
-                        className="group flex gap-4 rounded-2xl border border-krem-200 bg-white p-3 shadow-kart transition hover:border-orman-200 hover:shadow-kart-uzeri"
-                      >
-                        <div className="size-24 shrink-0 overflow-hidden rounded-xl bg-krem-200">
-                          {gorsel ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={gorsel}
-                              alt=""
-                              width={192}
-                              height={192}
-                              loading="lazy"
-                              className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.05]"
-                            />
-                          ) : (
-                            <span
-                              aria-hidden
-                              className="flex h-full w-full items-center justify-center text-2xl text-krem-400"
-                            >
-                              🍽
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex min-w-0 flex-1 flex-col">
-                          <p className="font-medium leading-snug text-orman-800">{urun.name}</p>
-                          <p className="mt-1 text-xs text-orman-500">
-                            {[urun.portionLabel, urun.optionGroups[0]?.name]
-                              .filter(Boolean)
-                              .join(' · ')}
-                          </p>
-
-                          <div className="mt-auto flex items-center justify-between gap-2 pt-3">
-                            <span className="font-semibold tabular-nums text-orman-800">
-                              {formatMinor(urun.priceMinor)}
-                            </span>
-                            <button
-                              type="button"
-                              disabled={!urun.isAvailable || !sube.isOpen}
-                              onClick={() => marka && urunEkle(urun, marka)}
-                              className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:bg-krem-200 disabled:text-orman-400 ${
-                                eklendi
-                                  ? 'bg-orman-500 text-white'
-                                  : 'bg-orman-800 text-krem-50 hover:bg-orman-700'
-                              }`}
-                            >
-                              {!urun.isAvailable ? 'Tükendi' : eklendi ? 'Eklendi ✓' : 'Ekle'}
-                            </button>
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
+                <ul className="mt-6 grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
+                  {kategori.products.map((urun) => (
+                    <li key={urun.id} className="h-full">
+                      <UrunKarti
+                        urun={urun}
+                        subeAcik={sube.isOpen}
+                        adet={adetHaritasi.get(urun.id) ?? 0}
+                        onEkle={() => marka && urunEkle(urun, marka)}
+                        onAzalt={() => urunAzalt(urun.id)}
+                      />
+                    </li>
+                  ))}
                 </ul>
               </section>
             ))}
@@ -253,11 +301,18 @@ export function MenuEkrani({ sube }: { sube: BranchDetail }) {
 
           {/* ---------------- Sepet ---------------- */}
           <aside
-            className={`lg:sticky lg:top-24 lg:self-start ${sepetAcik ? '' : 'hidden lg:block'}`}
+            className={`lg:sticky lg:top-28 lg:self-start ${sepetAcik ? '' : 'hidden lg:block'}`}
           >
-            <div className="rounded-2xl border border-krem-200 bg-white shadow-kart">
-              <div className="flex items-center justify-between border-b border-krem-200 px-5 py-4">
-                <h2 className="font-semibold text-orman-800">Sepetim</h2>
+            <div className="overflow-hidden rounded-2xl border border-krem-200 bg-white shadow-kart">
+              <div className="flex items-center justify-between gap-2 border-b border-krem-200 px-5 py-4">
+                <h2 className="flex items-center gap-2 font-semibold text-orman-800">
+                  Sepetim
+                  {sepet.toplamAdet > 0 ? (
+                    <span className="rounded-full bg-altin-300/20 px-2 py-0.5 text-xs font-semibold tabular-nums text-altin-600">
+                      {sepet.toplamAdet}
+                    </span>
+                  ) : null}
+                </h2>
                 {sepet.toplamAdet > 0 ? (
                   <button
                     type="button"
@@ -270,28 +325,41 @@ export function MenuEkrani({ sube }: { sube: BranchDetail }) {
               </div>
 
               {sepet.toplamAdet === 0 ? (
-                <div className="px-5 py-10 text-center">
-                  <p className="text-3xl" aria-hidden>
+                <div className="px-6 py-12 text-center">
+                  <span
+                    aria-hidden
+                    className="mx-auto flex size-14 items-center justify-center rounded-full bg-krem-100 text-2xl"
+                  >
                     🧺
-                  </p>
-                  <p className="mt-3 text-sm leading-relaxed text-orman-600">
+                  </span>
+                  <p className="mt-4 text-sm leading-relaxed text-orman-600">
                     Sepetin boş. Aynı şubedeki farklı markalardan ürünleri tek sepette
                     birleştirebilirsin.
                   </p>
                 </div>
               ) : (
                 <>
-                  <p className="px-5 pt-3 text-xs text-orman-500">{sepet.durum.subeAdi}</p>
+                  <p className="flex items-center gap-1.5 border-b border-krem-100 px-5 py-2.5 text-xs text-orman-500">
+                    <svg viewBox="0 0 16 16" fill="none" aria-hidden className="size-3.5">
+                      <path
+                        d="M8 14s4.5-3.8 4.5-7.3A4.5 4.5 0 0 0 3.5 6.7C3.5 10.2 8 14 8 14Z"
+                        stroke="currentColor"
+                        strokeWidth="1.2"
+                      />
+                      <circle cx="8" cy="6.6" r="1.6" stroke="currentColor" strokeWidth="1.2" />
+                    </svg>
+                    {sepet.durum.subeAdi}
+                  </p>
 
-                  <div className="max-h-[26rem] space-y-5 overflow-y-auto px-5 py-4">
+                  <div className="max-h-[24rem] space-y-5 overflow-y-auto px-5 py-4">
                     {sepet.markaGruplari.map((grup) => (
                       <div key={grup.markaId}>
                         <MarkaRozeti ad={grup.markaAdi} renk={grup.markaRengi} />
-                        <ul className="mt-2.5 space-y-3">
+                        <ul className="mt-3 space-y-3.5">
                           {grup.satirlar.map((satir) => {
                             const anahtar = sepet.anahtarla(satir);
                             return (
-                              <li key={anahtar} className="flex items-start gap-2 text-sm">
+                              <li key={anahtar} className="flex items-start gap-3 text-sm">
                                 <div className="min-w-0 flex-1">
                                   <p className="leading-snug text-orman-800">{satir.urunAdi}</p>
                                   {satir.secenekler.length > 0 ? (
@@ -299,25 +367,39 @@ export function MenuEkrani({ sube }: { sube: BranchDetail }) {
                                       {satir.secenekler.map((s) => s.ad).join(', ')}
                                     </p>
                                   ) : null}
-                                  <div className="mt-1.5 flex items-center gap-1">
+                                  <div className="mt-2 flex items-center gap-1 rounded-full border border-krem-300 p-0.5 w-fit">
                                     <button
                                       type="button"
                                       aria-label={`${satir.urunAdi} adedini azalt`}
                                       onClick={() => sepet.adetDegistir(anahtar, satir.adet - 1)}
-                                      className="size-6 rounded-md border border-krem-300 text-orman-700 transition hover:bg-krem-100"
+                                      className="flex size-6 items-center justify-center rounded-full text-orman-700 transition hover:bg-krem-100"
                                     >
-                                      −
+                                      <svg viewBox="0 0 16 16" aria-hidden className="size-3">
+                                        <path
+                                          d="M3 8h10"
+                                          stroke="currentColor"
+                                          strokeWidth="2"
+                                          strokeLinecap="round"
+                                        />
+                                      </svg>
                                     </button>
-                                    <span className="w-6 text-center tabular-nums">
+                                    <span className="min-w-5 text-center text-xs font-semibold tabular-nums">
                                       {satir.adet}
                                     </span>
                                     <button
                                       type="button"
                                       aria-label={`${satir.urunAdi} adedini artır`}
                                       onClick={() => sepet.adetDegistir(anahtar, satir.adet + 1)}
-                                      className="size-6 rounded-md border border-krem-300 text-orman-700 transition hover:bg-krem-100"
+                                      className="flex size-6 items-center justify-center rounded-full text-orman-700 transition hover:bg-krem-100"
                                     >
-                                      +
+                                      <svg viewBox="0 0 16 16" aria-hidden className="size-3">
+                                        <path
+                                          d="M8 3v10M3 8h10"
+                                          stroke="currentColor"
+                                          strokeWidth="2"
+                                          strokeLinecap="round"
+                                        />
+                                      </svg>
                                     </button>
                                   </div>
                                 </div>
@@ -332,12 +414,12 @@ export function MenuEkrani({ sube }: { sube: BranchDetail }) {
                     ))}
                   </div>
 
-                  <div className="border-t border-krem-200 px-5 py-4">
+                  <div className="border-t border-krem-200 bg-krem-50 px-5 py-4">
                     <div className="flex items-baseline justify-between">
                       <span className="text-sm text-orman-500">
                         {sepet.toplamAdet} ürün · {sepet.markaGruplari.length} marka
                       </span>
-                      <span className="text-xl font-semibold tabular-nums text-orman-800">
+                      <span className="text-2xl font-semibold tabular-nums text-orman-800">
                         {formatMinor(sepet.toplamMinor)}
                       </span>
                     </div>
@@ -345,11 +427,11 @@ export function MenuEkrani({ sube }: { sube: BranchDetail }) {
                       type="button"
                       disabled
                       title="Ödeme adımı henüz bağlanmadı"
-                      className="mt-3 w-full rounded-full bg-orman-800 py-3 font-medium text-krem-50 transition hover:bg-orman-700 disabled:cursor-not-allowed disabled:bg-krem-200 disabled:text-orman-400"
+                      className="mt-4 w-full rounded-full bg-orman-800 py-3.5 font-medium text-krem-50 transition hover:bg-orman-700 disabled:cursor-not-allowed disabled:bg-krem-200 disabled:text-orman-400"
                     >
                       Ödemeye Geç
                     </button>
-                    <p className="mt-2.5 text-center text-xs text-orman-500">
+                    <p className="mt-3 text-center text-xs leading-relaxed text-orman-500">
                       Siparişini {sube.name}&apos;nden teslim alacaksın.
                     </p>
                   </div>

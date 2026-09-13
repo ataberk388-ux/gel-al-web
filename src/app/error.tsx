@@ -23,7 +23,7 @@ export default function Hata({
   retry: () => void;
 }) {
   return (
-    <div className="mx-auto flex max-w-xl flex-col items-center px-4 py-24 text-center">
+    <div className="kabuk-dar flex flex-col items-center py-24 text-center">
       <p className="text-4xl" aria-hidden>
         🍲
       </p>

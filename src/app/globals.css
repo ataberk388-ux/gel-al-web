@@ -85,3 +85,103 @@ h3 {
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Sayfa kabuğu
+ *
+ * Tüm bölümler aynı genişlikte hizalansın diye tek sınıf. Daha önce her
+ * bölümde `max-w-6xl` (1152px) elle yazılıydı; geniş ekranda içerik ortada
+ * sıkışıp iki yanı boş kalıyordu. Genişlik ekranla birlikte büyüyor ama
+ * sınırsız değil — 1600px üstünde satırlar okunamayacak kadar uzuyor.
+ * ------------------------------------------------------------------------- */
+.kabuk {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 100rem;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 640px) {
+  .kabuk {
+    padding-inline: 1.75rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .kabuk {
+    padding-inline: 3rem;
+  }
+}
+
+/* Dar kabuk — uzun metin blokları için (hata ekranları, bilgi sayfaları) */
+.kabuk-dar {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 42rem;
+  padding-inline: 1rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * Altın ince çizgi — bölüm başlıklarının altında
+ * Altın, paletin vurgu rengi; düğmelerde kullanılınca yemek fotoğraflarıyla
+ * yarışıyor, ince bir çizgi olarak ise kimliği taşıyor.
+ * ------------------------------------------------------------------------- */
+.altin-cizgi::after {
+  content: '';
+  display: block;
+  width: 2.5rem;
+  height: 2px;
+  margin-top: 0.75rem;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--color-altin-400), var(--color-altin-300));
+}
+
+/*
+ * Kart görsellerinde hafif iç gölge — beyaz zeminde fotoğrafın kenarı erimesin.
+ *
+ * Bu sınıf KONUM BELİRLEMEZ. Önceden `position: relative` içeriyordu ve
+ * Tailwind'den sonra yüklendiği için `absolute` yardımcı sınıfını eziyordu:
+ * konumlandırılmış bir görsel sessizce akışa geri düşüyordu. Kullanan
+ * elemanlar kendi `relative`/`absolute` sınıfını taşır.
+ */
+.gorsel-cerceve::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgb(16 43 31 / 0.06);
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Görünüre girince belirme
+ *
+ * Kartlar sayfa kaydırılırken hafifçe yükselerek beliriyor. Süs değil: uzun
+ * listelerde hangi kartların yeni geldiğini göz takip edemiyordu, hepsi aynı
+ * anda oradaymış gibi duruyordu.
+ *
+ * Sınıf JavaScript ile ekleniyor (IntersectionObserver). JavaScript çalışmazsa
+ * kart zaten görünür kalır — `belir` sınıfı olmadan varsayılan görünür durum
+ * geçerli.
+ * ------------------------------------------------------------------------- */
+.belir {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.belir-gorundu {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .belir {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

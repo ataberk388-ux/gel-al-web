@@ -1,59 +1,98 @@
 /**
- * Gel-Al marka işaretleri.
+ * Marka varlıkları.
  *
- * GEÇİCİ: Hürmet Gıda'nın özgün logo dosyaları henüz elimizde yok. Bu SVG'ler
- * mockup'taki kimliğe (altın kubbe mührü + serif "Gel Al" yazısı) sadık kalarak
- * çizildi. Gerçek logolar `apps/web/public/marka/` altına konulduğunda bu
- * bileşenlerin içi `<img>` ile değiştirilir; kullanan hiçbir sayfa değişmez.
+ * Kaynak: `HURMET_2.PDF` — altın çember içinde koyu yeşil "H", yaprak ve
+ * "HÜRMET GIDA TİC. A.Ş." kilidi. Vektör kaynaktan 2048px'te çizilip beyaz
+ * zemini alfaya çevrildi; `public/marka/` altında duruyor.
+ *
+ * Neden SVG değil: çizim degrade dolgularla yapılmış detaylı bir illüstrasyon.
+ * Elle SVG'ye çevirmek altın degradelerin derinliğini kaybettiriyor. Başlıkta
+ * 40px, alt bilgide 160px gösterilen bir logo için 900px PNG fazlasıyla keskin.
+ *
+ * Koyu zeminde `ton="acik"` kullanılmalı: o varyantta yeşil harfler kreme
+ * çevrildi, altın olduğu gibi bırakıldı (altın koyu yeşilde zaten parlıyor).
  */
 
+/** Altın çember + H + yaprak. Başlıkta ve dar alanlarda. */
+export function HurmetAmblem({
+  className = '',
+  ton = 'koyu',
+}: {
+  className?: string;
+  ton?: 'koyu' | 'acik';
+}) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={ton === 'koyu' ? '/marka/amblem.png' : '/marka/amblem-acik.png'}
+      alt=""
+      aria-hidden
+      width={900}
+      height={451}
+      className={className}
+    />
+  );
+}
+
+/** Tam kilit: amblem + HÜRMET + GIDA TİC. A.Ş. + slogan. */
+export function HurmetKilit({
+  className = '',
+  ton = 'koyu',
+}: {
+  className?: string;
+  ton?: 'koyu' | 'acik';
+}) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={ton === 'koyu' ? '/marka/kilit.png' : '/marka/kilit-acik.png'}
+      alt="Hürmet Gıda Tic. A.Ş."
+      width={1000}
+      height={964}
+      className={className}
+    />
+  );
+}
+
+/**
+ * Başlık kilidi: amblem + "Hürmet / Gel Al".
+ *
+ * İki satır kasıtlı — "Hürmet" işletme, "Gel Al" hizmet adı. Tek satıra
+ * dizilince üç kelime ezik duruyor ve hangisinin ne olduğu kayboluyor.
+ */
 export function GelAlLogo({
   className = '',
   ton = 'koyu',
 }: {
   className?: string;
-  /** Açık zeminde "koyu", koyu zeminde "acik". */
   ton?: 'koyu' | 'acik';
 }) {
-  const yazi = ton === 'koyu' ? '#173d2b' : '#f7f4ec';
+  const yazi = ton === 'koyu' ? '#173d2b' : '#f6f2e9';
+  const vurgu = ton === 'koyu' ? '#9c6c15' : '#e8c27a';
 
   return (
     <span className={`inline-flex items-center gap-2.5 ${className}`}>
-      <svg
-        viewBox="0 0 32 32"
-        aria-hidden
-        className="size-8 shrink-0"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Kapaklı tencere/kubbe — sıcak yemek ve "teslim alma" çağrışımı */}
-        <path
-          d="M4 22c0-6.6 5.4-12 12-12s12 5.4 12 12H4Z"
-          fill="#d9a441"
-        />
-        <path d="M2.5 22h27a1.5 1.5 0 0 1 0 3h-27a1.5 1.5 0 0 1 0-3Z" fill="#b9832c" />
-        <path d="M16 5.5a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2Z" fill="#b9832c" />
-        {/* Buhar */}
-        <path
-          d="M16 15.5c1.9 0 3.4 1.3 3.4 3 0 1.2-.8 2-1.9 2.6"
-          stroke="#fff"
-          strokeOpacity="0.55"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-        />
-      </svg>
+      <HurmetAmblem ton={ton} className="h-9 w-auto shrink-0" />
 
-      <span
-        className="font-display text-[1.35rem] leading-none font-semibold tracking-tight"
-        style={{ color: yazi }}
-      >
-        Gel Al
+      <span className="inline-flex flex-col leading-none">
+        <span
+          className="font-sans text-[0.6rem] font-semibold uppercase tracking-[0.22em]"
+          style={{ color: vurgu }}
+        >
+          Hürmet
+        </span>
+        <span
+          className="mt-1 font-display text-[1.3rem] font-semibold leading-none tracking-tight"
+          style={{ color: yazi }}
+        >
+          Gel Al
+        </span>
       </span>
     </span>
   );
 }
 
-/** İşletme kilidi — altbilgide ve şube kartlarında kullanılır. */
+/** İşletme künyesi — alt bilgide metin içinde kullanılır. */
 export function HurmetIsaret({ className = '' }: { className?: string }) {
   return (
     <span
