@@ -1,0 +1,87 @@
+@import 'tailwindcss';
+
+/**
+ * Gel-Al tasarım belirteçleri.
+ *
+ * Kimlik mockup'tan: krem zemin, koyu orman yeşili metin, altın vurgu.
+ * Arayüz AÇIK renklidir — koyu yeşil yalnızca düğme, altbilgi ve vurgu için;
+ * geniş koyu bloklar yemek fotoğraflarını bastırıyor.
+ */
+@theme {
+  /* Orman — kurumsal yeşil */
+  --color-orman-50: #f1f6f2;
+  --color-orman-100: #dfeae2;
+  --color-orman-200: #bfd4c6;
+  --color-orman-300: #93b5a1;
+  --color-orman-400: #5f8e73;
+  --color-orman-500: #3d7052;
+  --color-orman-600: #2a5a3f;
+  --color-orman-700: #1f4a34;
+  --color-orman-800: #173d2b;
+  --color-orman-900: #102b1f;
+
+  /* Krem — sayfa zemini ve kart yüzeyleri */
+  --color-krem-50: #fbf9f4;
+  --color-krem-100: #f6f2e9;
+  --color-krem-200: #ece5d6;
+  --color-krem-300: #ddd2bc;
+  --color-krem-400: #c4b498;
+
+  /* Altın — vurgu, üst etiket, birincil eylem alternatifi */
+  --color-altin-300: #e8c27a;
+  --color-altin-400: #d9a441;
+  --color-altin-500: #c2891f;
+  --color-altin-600: #9c6c15;
+
+  --font-display: var(--yazi-display), Georgia, 'Times New Roman', serif;
+  --font-sans: var(--yazi-govde), ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+
+  /* Yumuşak, tek yönlü gölgeler — kart yüzeyleri kâğıt gibi dursun */
+  --shadow-kart: 0 1px 2px rgb(16 43 31 / 0.04), 0 8px 24px -12px rgb(16 43 31 / 0.15);
+  --shadow-kart-uzeri: 0 2px 4px rgb(16 43 31 / 0.06), 0 16px 40px -16px rgb(16 43 31 / 0.25);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-krem-50);
+  color: var(--color-orman-800);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Başlıklarda serif — mockup'taki editöryel ton */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+}
+
+/* Yatay kaydırmalı şerit — marka sekmeleri, kategori sekmeleri */
+.serit {
+  scrollbar-width: none;
+}
+.serit::-webkit-scrollbar {
+  display: none;
+}
+
+/* Klavye ile gezinenler için tutarlı odak halkası */
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--color-altin-500);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+/* Hareket hassasiyeti olan kullanıcılar için geçişleri kapat */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
